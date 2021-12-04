@@ -15,8 +15,9 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import add
 from tensorflow.keras.layers import Input
 from tensorflow.keras.layers import Activation
+from tensorflow.keras.applications.resnet50 import ResNet50
 
-
+resnet_weights_path = 'res50_basemodel.h5'
 
 #creating vgg model
 def define_model_vgg(numBlock, useDropOut):
@@ -46,7 +47,7 @@ def define_model_vgg(numBlock, useDropOut):
 	return model
 
 #create resnet model
-def define_model_res(numBlock, useDropOut):
+def define_model_res_old(numBlock, useDropOut):
 	# define model input
 	visible = Input(shape=(200, 200, 3))
 	# add residual module
@@ -66,6 +67,27 @@ def define_model_res(numBlock, useDropOut):
 	model.summary()
 	
 	return model
+
+
+def define_model_res(numBlock, useDropOut):
+	model = Sequential()
+
+	# 1st layer as the lumpsum weights from resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5
+	# NOTE that this layer will be set below as NOT TRAINABLE, i.e., use it as is
+	model.add(ResNet50(include_top = False, pooling = 'avg', weights = resnet_weights_path))
+	
+	# 2nd layer as Dense for 2-class classification, i.e., dog or cat using SoftMax activation
+	model.add(Dense(2, activation = 'softmax'))
+	
+	# Say not to train first layer (ResNet) model as it is already trained
+	model.layers[0].trainable = False
+	
+	sgd = SGD(lr = 0.01, decay = 1e-6, momentum = 0.9, nesterov = True)
+	model.compile(optimizer = sgd, loss = 'categorical_crossentropy', metrics = ['accuracy'])
+	
+	model.summary()
+	return model
+	
 
 def residual_module(layer_in, n_filters):
 	merge_input = layer_in
@@ -94,3 +116,14 @@ def define_model(modelType, numBlock, useDropOut):
 	else:
 		print('No model defined')
 		return
+	
+def download_resnet50_pretrained_model():
+	
+	
+	base_model = ResNet50(include_top=False, weights='imagenet', input_shape=(200,200,3), pooling='avg')
+	base_model.save("res50_basemodel.h5")
+	
+def main():
+	define_model_res(0,0)
+	
+main()

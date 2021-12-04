@@ -10,10 +10,14 @@ from matplotlib import pyplot
 from datetime import datetime
 from keras.preprocessing.image import ImageDataGenerator
 from model import define_model
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+
+cb_early_stopper = EarlyStopping(monitor = 'val_loss', patience = 3)
+cb_checkpointer = ModelCheckpoint(filepath = '/working/best.hdf5', monitor = 'val_loss', save_best_only = True, mode = 'auto')
 
 modelType = 'vgg' #vgg or res
-numBlock = 4
-useDropOut = True
+numBlock = 3
+useDropOut = False
 
 # plot diagnostic learning curves
 def summarize_diagnostics(history):
@@ -47,11 +51,14 @@ def run_test_harness():
 	model = define_model(modelType, numBlock, useDropOut)
 	# create data generator
 	datagen = ImageDataGenerator(rescale=1.0/255.0)
+	
+	batch_size = 64
+	#if modelType == 'vgg':
+		#batch_size = 64
+	#elif modelType == 'res':
+		#batch_size = 32
+		
 	# prepare iterators
-	if modelType == 'vgg':
-		batch_size = 64
-	elif modelType == 'res':
-		batch_size = 32
 		
 	train_it = datagen.flow_from_directory('dataset_dogs_vs_cats/train/',
 		class_mode='binary', batch_size=batch_size, target_size=(200, 200))
